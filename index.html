@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Prediction Engine</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple style for table row hover */
+        tbody tr:hover {
+            background-color: #374151; /* gray-700 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans p-8">
+
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-red-500">F1 Prediction Engine <span class="text-white">MVP</span></h1>
+            <p class="text-lg text-gray-400">Using a Python model to predict race results</p>
+        </header>
+
+        <!-- Control Panel -->
+        <div class="mb-6 text-center">
+            <button id="predict-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300">
+                Predict Last Completed Race
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div>
+            <!-- Loading Spinner (Hidden by default) -->
+            <div id="loading-spinner" class="text-center p-10 hidden">
+                <svg class="animate-spin h-12 w-12 text-red-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p class="text-gray-400 mt-4 text-lg">Loading race data and running predictions... (This can take 10-20 seconds)</p>
+            </div>
+
+            <!-- Error Message (Hidden by default) -->
+            <div id="error-message" class="hidden bg-red-800 border border-red-600 text-red-100 px-4 py-3 rounded-lg relative" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline" id="error-text"></span>
+            </div>
+
+            <!-- Results Table (Container) -->
+            <div id="results-container" class="hidden">
+                <h2 class="text-2xl font-bold mb-4 text-center" id="race-name"></h2>
+                
+                <div class="bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-700">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Predicted</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Driver</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Team</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Start Grid</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actual Finish</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-gray-800 divide-y divide-gray-700" id="results-table-body">
+                            <!-- Rows will be injected here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Get references to our HTML elements
+        const predictButton = document.getElementById('predict-button');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const resultsContainer = document.getElementById('results-container');
+        const resultsTableBody = document.getElementById('results-table-body');
+        const raceNameEl = document.getElementById('race-name');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+
+        // This is the URL our Python API server is running on
+        const API_URL = 'http://127.0.0.1:8000/predict/last_race';
+
+        // Add a click listener to the button
+        predictButton.addEventListener('click', getPredictions);
+
+        async function getPredictions() {
+            // 1. Show loading spinner and hide old results/errors
+            loadingSpinner.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            predictButton.disabled = true;
+
+            try {
+                // 2. Call the API
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    // Handle HTTP errors
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    // Handle errors returned by the API
+                    throw new Error(data.error);
+                }
+                
+                // 3. Populate the results
+                populateTable(data);
+
+                // 4. Show results and hide loading spinner
+                resultsContainer.classList.remove('hidden');
+
+            } catch (error) {
+                // 5. Show error message if something fails
+                console.error('Error fetching predictions:', error);
+                errorText.textContent = 'Could not connect to API. Is it running? Error: ' + error.message;
+                errorMessage.classList.remove('hidden');
+            } finally {
+                // 6. Always hide spinner and re-enable button
+                loadingSpinner.classList.add('hidden');
+                predictButton.disabled = false;
+            }
+        }
+
+        function populateTable(data) {
+            // Set the race name
+            raceNameEl.textContent = `Predicted Results: ${data.race_name}`;
+            
+            // Clear any old results from the table
+            resultsTableBody.innerHTML = '';
+
+            // Loop through each prediction and create a table row
+            data.predictions.forEach(driver => {
+                const row = document.createElement('tr');
+                row.className = 'text-white';
+
+                row.innerHTML = `
+                    <td class="px-4 py-4 whitespace-nowrap text-lg font-bold">${driver.PredictedRank}</td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium">${driver.DriverName}</div>
+                        <div class="text-sm text-gray-400">${driver.Abbreviation}</div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-300">${driver.TeamName}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-300">${driver.GridPosition}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-300">${driver.ActualPosition}</td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+        }
+
+    </script>
+</body>
+</html>

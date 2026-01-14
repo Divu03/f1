@@ -1,0 +1,48 @@
+--- F1 Project Specific ---
+
+Ignore the FastF1 cache folder
+
+cache/
+pycache/
+
+--- Python General ---
+
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+--- Virtual Environments ---
+
+venv/
+env/
+ENV/
+.env
+.venv/
+
+--- IDE Settings (Optional) ---
+
+.vscode/
+.idea/
+
+--- OS Generated Files ---
+
+.DS_Store
+Thumbs.db

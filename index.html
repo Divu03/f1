@@ -3,191 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Analytics Hub</title>
+    <title>F1 Analytics Hub | AI & Data Science</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-hover:hover { transform: translateY(-5px); transition: all 0.3s ease; cursor: pointer; border-color: #ef4444; }
+        .modal-overlay { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
+        .feature-bar { transition: width 1s ease-in-out; }
+    </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans p-8">
+<body class="bg-gray-900 text-gray-100 font-sans p-4 md:p-8">
 
-    <div class="max-w-5xl mx-auto space-y-12">
+    <div class="max-w-6xl mx-auto space-y-12">
         
         <!-- HEADER -->
-        <header class="text-center">
+        <header class="text-center border-b border-gray-800 pb-8">
             <h1 class="text-5xl font-bold text-red-600 tracking-tight">F1 <span class="text-white">Analytics Hub</span></h1>
-            <p class="text-gray-400 mt-2 text-lg">AI Predictions & Historical Data</p>
+            <p class="text-gray-400 mt-2 text-lg italic">Predictive Modeling & Statistical Analysis for Professional Motorsports</p>
+            <div class="flex justify-center gap-4 mt-4">
+                <span class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700">Python</span>
+                <span class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700">Scikit-Learn</span>
+                <span class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700">FastAPI</span>
+            </div>
         </header>
 
-        <!-- SECTION 1: PREDICTION ENGINE -->
-        <section class="bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-700">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <span class="bg-red-600 w-2 h-8 mr-3 rounded"></span>
-                Next Race Prediction
-            </h2>
+        <!-- GRID LAYOUT FOR SECTIONS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <div class="flex flex-col items-center">
-                <button id="predict-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg transition duration-300 transform hover:scale-105 shadow-md">
-                    Predict Last Race Outcome
-                </button>
-                
-                <!-- Loading & Error -->
-                <div id="loading-spinner" class="hidden mt-6 text-center">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500 mx-auto"></div>
-                    <p class="text-gray-400 mt-2">Crunching numbers...</p>
-                </div>
-                <div id="error-message" class="hidden mt-4 text-red-400 bg-red-900/50 px-4 py-2 rounded"></div>
+            <!-- LEFT: PREDICTION ENGINE -->
+            <div class="lg:col-span-2 space-y-8">
+                <section class="bg-gray-800 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-700">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <span class="bg-red-600 w-2 h-8 mr-3 rounded"></span> Real-Time Prediction
+                    </h2>
+                    <div class="flex flex-col items-center">
+                        <button id="predict-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg transition duration-300 transform hover:scale-105 shadow-md">
+                            Run AI Prediction
+                        </button>
+                        <div id="loading-spinner" class="hidden mt-6 text-center">
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500 mx-auto"></div>
+                        </div>
+                    </div>
+
+                    <div id="results-container" class="hidden mt-8">
+                        <h3 id="race-name" class="text-xl font-bold text-center mb-4 text-gray-300"></h3>
+                        <div class="overflow-x-auto rounded-xl border border-gray-700">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-700 text-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-3">Rank</th>
+                                        <th class="px-4 py-3">Driver</th>
+                                        <th class="px-4 py-3">Team</th>
+                                        <th class="px-4 py-3">Grid</th>
+                                        <th class="px-4 py-3">Actual</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-table-body" class="divide-y divide-gray-700 bg-gray-800"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SEASON INSIGHTS -->
+                <section class="bg-gray-800 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-700">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <span class="bg-blue-600 w-2 h-8 mr-3 rounded"></span> Season Diagnostics
+                    </h2>
+
+                    <div class="flex flex-wrap gap-4 mb-8">
+                        <select id="year-select" class="bg-gray-700 text-white border-none rounded-lg px-6 py-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="2024">2024 Season</option>
+                            <option value="2023">2023 Season</option>
+                            <option value="2022">2022 Season</option>
+                            <option value="2021">2021 Season</option>
+                            <option value="2020">2020 Season</option>
+                            <option value="2019">2019 Season</option>
+                            <option value="2018">2018 Season</option>
+                        </select>
+                        <button id="insights-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+                            Analyze Year
+                        </button>
+                    </div>
+
+                    <div id="insights-display" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-gray-700 p-4 rounded-xl border border-gray-600 card-hover" onclick="showModal('champion')">
+                            <p class="text-gray-400 text-xs font-bold uppercase">Champion</p>
+                            <p id="stat-champion" class="text-xl font-bold text-white">-</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-xl border border-gray-600 card-hover" onclick="showModal('pole_rate')">
+                            <p class="text-gray-400 text-xs font-bold uppercase">Pole Conv.</p>
+                            <p id="stat-pole-rate" class="text-xl font-bold text-green-400">-%</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-xl border border-gray-600 card-hover" onclick="showModal('overtake')">
+                            <p class="text-gray-400 text-xs font-bold uppercase">Overtake King</p>
+                            <p id="stat-overtake" class="text-xl font-bold text-white">-</p>
+                        </div>
+                        <!-- New Metrics -->
+                        <div class="bg-gray-700 p-4 rounded-xl border border-gray-600 card-hover" onclick="showModal('reliability')">
+                            <p class="text-gray-400 text-xs font-bold uppercase">Mechanical Failure Rate</p>
+                            <p id="stat-reliability" class="text-xl font-bold text-orange-400">-%</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-xl border border-gray-600 card-hover" onclick="showModal('consistency')">
+                            <p class="text-gray-400 text-xs font-bold uppercase">Consistency King</p>
+                            <p id="stat-consistency" class="text-xl font-bold text-white">-</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-xl border border-gray-600 card-hover" onclick="showModal('weather')">
+                            <p class="text-gray-400 text-xs font-bold uppercase">Track Climate</p>
+                            <p id="stat-weather" class="text-xl font-bold text-blue-300">- °C</p>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <!-- Prediction Table -->
-            <div id="results-container" class="hidden mt-8">
-                <h3 id="race-name" class="text-xl font-bold text-center mb-4 text-gray-300"></h3>
-                <div class="overflow-x-auto rounded-lg">
-                    <table class="w-full text-left text-sm text-gray-400">
-                        <thead class="bg-gray-700 text-gray-200 uppercase">
-                            <tr>
-                                <th class="px-6 py-3">Pred</th>
-                                <th class="px-6 py-3">Driver</th>
-                                <th class="px-6 py-3">Team</th>
-                                <th class="px-6 py-3">Grid</th>
-                                <th class="px-6 py-3">Actual</th>
-                            </tr>
-                        </thead>
-                        <tbody id="results-table-body" class="divide-y divide-gray-700 bg-gray-800"></tbody>
-                    </table>
-                </div>
+            <!-- RIGHT: MODEL INTELLIGENCE (DS Metrics) -->
+            <div class="space-y-8">
+                <section class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 h-full">
+                    <h2 class="text-xl font-bold mb-6 flex items-center">
+                        <span class="bg-green-600 w-2 h-8 mr-3 rounded"></span> Model Intelligence
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <!-- Reliability Stats -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 text-center">
+                                <p class="text-gray-500 text-xs uppercase font-bold">R² Accuracy</p>
+                                <p class="text-2xl font-bold text-green-400">0.44</p>
+                                <p class="text-[10px] text-gray-400 mt-1">Variance explained</p>
+                            </div>
+                            <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 text-center">
+                                <p class="text-gray-500 text-xs uppercase font-bold">Test MAE</p>
+                                <p class="text-2xl font-bold text-blue-400">3.37</p>
+                                <p class="text-[10px] text-gray-400 mt-1">Avg. position error</p>
+                            </div>
+                        </div>
+
+                        <!-- Feature Importance -->
+                        <div>
+                            <p class="text-sm font-bold text-gray-300 mb-4">Feature Weight Analysis (Importance)</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>Grid Position</span>
+                                        <span class="text-red-400">55.7%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-red-500 h-full feature-bar" style="width: 55.7%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>Constructor Form</span>
+                                        <span class="text-blue-400">10.4%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-blue-500 h-full feature-bar" style="width: 10.4%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>Track Temperature</span>
+                                        <span class="text-orange-400">9.0%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-orange-500 h-full feature-bar" style="width: 9.0%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>Driver Recent Form</span>
+                                        <span class="text-purple-400">7.5%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-purple-500 h-full feature-bar" style="width: 7.5%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Methodology Note -->
+                        <div class="bg-blue-900/20 p-4 rounded-xl border border-blue-800/50">
+                            <p class="text-[11px] leading-relaxed text-blue-200">
+                                <strong>Technical Insight:</strong> This model utilizes a Random Forest Regressor trained on 3,000+ race entries. By shifting focus from driver IDs to rolling "Form" averages, the system maintains high predictive power for rookies and team-rebrands.
+                            </p>
+                        </div>
+                    </div>
+                </section>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <!-- SECTION 2: HISTORICAL INSIGHTS -->
-        <section class="bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-700">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <span class="bg-blue-600 w-2 h-8 mr-3 rounded"></span>
-                Season Insights
-            </h2>
-
-            <div class="flex gap-4 mb-8">
-                <select id="year-select" class="bg-gray-700 text-white border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="2024">2024 Season</option>
-                    <option value="2023">2023 Season</option>
-                    <option value="2022">2022 Season</option>
-                    <option value="2021">2021 Season</option>
-                    <option value="2020">2020 Season</option>
-                    <option value="2019">2019 Season</option>
-                    <option value="2018">2018 Season</option>
-                </select>
-                <button id="insights-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
-                    Analyze Season
-                </button>
-            </div>
-
-            <!-- Insight Cards -->
-            <div id="insights-display" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Card 1: Champion -->
-                <div class="bg-gray-700 p-6 rounded-xl border border-gray-600">
-                    <p class="text-gray-400 text-sm uppercase font-bold">Driver Champion</p>
-                    <p id="stat-champion" class="text-2xl font-bold text-white mt-1">-</p>
-                    <p id="stat-champ-team" class="text-sm text-blue-400">-</p>
-                </div>
-                <!-- Card 2: Top Constructor -->
-                <div class="bg-gray-700 p-6 rounded-xl border border-gray-600">
-                    <p class="text-gray-400 text-sm uppercase font-bold">Top Constructor</p>
-                    <p id="stat-constructor" class="text-2xl font-bold text-white mt-1">-</p>
-                    <p id="stat-const-points" class="text-sm text-blue-400">-</p>
-                </div>
-                <!-- Card 3: Pole Win Rate -->
-                <div class="bg-gray-700 p-6 rounded-xl border border-gray-600">
-                    <p class="text-gray-400 text-sm uppercase font-bold">Win from Pole</p>
-                    <p id="stat-pole-rate" class="text-3xl font-bold text-green-400 mt-1">-%</p>
-                    <p class="text-xs text-gray-400 mt-1">Reliability of Qualifying</p>
-                </div>
-                <!-- Card 4: Rainy Races -->
-                <div class="bg-gray-700 p-6 rounded-xl border border-gray-600">
-                    <p class="text-gray-400 text-sm uppercase font-bold">Rainy Races</p>
-                    <p id="stat-rain" class="text-3xl font-bold text-blue-300 mt-1">-</p>
-                    <p class="text-xs text-gray-400 mt-1">Weather Chaos</p>
-                </div>
-            </div>
-            <div id="insights-error" class="hidden mt-4 text-red-400"></div>
-        </section>
-
+    <!-- MODAL -->
+    <div id="info-modal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 border border-gray-600 max-w-md w-full rounded-2xl p-8 shadow-2xl relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h3 id="modal-title" class="text-2xl font-bold text-red-500 mb-4 uppercase">Insight Detail</h3>
+            <p id="modal-body" class="text-gray-300 leading-relaxed text-lg mb-6"></p>
+            <button onclick="closeModal()" class="w-full bg-gray-700 hover:bg-gray-600 py-3 rounded-xl font-bold transition">Close</button>
+        </div>
     </div>
 
     <script>
         const API_BASE = 'http://127.0.0.1:8000';
+        let currentInsights = null;
 
-        // --- PREDICTION LOGIC ---
+        // PREDICTION
         document.getElementById('predict-button').addEventListener('click', async () => {
             const btn = document.getElementById('predict-button');
             const spinner = document.getElementById('loading-spinner');
             const container = document.getElementById('results-container');
-            const errorMsg = document.getElementById('error-message');
-
-            btn.disabled = true;
-            spinner.classList.remove('hidden');
-            container.classList.add('hidden');
-            errorMsg.classList.add('hidden');
+            btn.disabled = true; spinner.classList.remove('hidden'); container.classList.add('hidden');
 
             try {
                 const res = await fetch(`${API_BASE}/predict/last_race`);
                 const data = await res.json();
-                
                 if(data.error) throw new Error(data.error);
 
                 document.getElementById('race-name').textContent = data.race_name;
                 const tbody = document.getElementById('results-table-body');
                 tbody.innerHTML = '';
-
                 data.predictions.forEach(p => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-700 transition";
                     tr.innerHTML = `
-                        <td class="px-6 py-4 font-bold text-white">${p.PredictedRank}</td>
-                        <td class="px-6 py-4 text-white">${p.DriverName} <span class="text-gray-500 text-xs">(${p.Abbreviation})</span></td>
-                        <td class="px-6 py-4">${p.TeamName}</td>
-                        <td class="px-6 py-4">${p.GridPosition || 'Pit'}</td>
-                        <td class="px-6 py-4 font-bold ${p.ActualPosition === p.PredictedRank ? 'text-green-400' : ''}">${p.ActualPosition || 'DNF'}</td>
+                        <td class="px-4 py-4 font-bold text-white">${p.PredictedRank}</td>
+                        <td class="px-4 py-4 text-white">${p.FullName}</td>
+                        <td class="px-4 py-4 text-gray-400">${p.TeamName}</td>
+                        <td class="px-4 py-4">${p.GridPosition || 'Pit'}</td>
+                        <td class="px-4 py-4 font-bold ${p.ActualPosition === p.PredictedRank ? 'text-green-400' : ''}">${p.ActualPosition || 'DNF'}</td>
                     `;
                     tbody.appendChild(tr);
                 });
                 container.classList.remove('hidden');
-            } catch (e) {
-                errorMsg.textContent = e.message;
-                errorMsg.classList.remove('hidden');
-            } finally {
-                spinner.classList.add('hidden');
-                btn.disabled = false;
-            }
+            } catch (e) { alert(e.message); } finally { spinner.classList.add('hidden'); btn.disabled = false; }
         });
 
-        // --- INSIGHTS LOGIC ---
+        // INSIGHTS
         document.getElementById('insights-button').addEventListener('click', async () => {
             const year = document.getElementById('year-select').value;
             const container = document.getElementById('insights-display');
-            const errorDiv = document.getElementById('insights-error');
-            
-            errorDiv.classList.add('hidden');
             container.classList.add('hidden');
 
             try {
                 const res = await fetch(`${API_BASE}/insights/${year}`);
-                if(!res.ok) throw new Error("Data not available for this year");
-                
                 const data = await res.json();
-                
-                // Update UI
+                currentInsights = data;
+
                 document.getElementById('stat-champion').textContent = data.champion.name;
-                document.getElementById('stat-champ-team').textContent = `${data.champion.points} pts`;
-                
-                document.getElementById('stat-constructor').textContent = data.constructor.name;
-                document.getElementById('stat-const-points').textContent = `${data.constructor.points} pts`;
-                
-                document.getElementById('stat-pole-rate').textContent = `${data.stats.pole_win_percentage}%`;
-                document.getElementById('stat-rain').textContent = data.stats.rainy_races;
+                document.getElementById('stat-pole-rate').textContent = `${data.pole_rate.value}%`;
+                document.getElementById('stat-reliability').textContent = `${data.reliability.value}%`;
+                document.getElementById('stat-overtake').textContent = data.overtake.driver;
+                document.getElementById('stat-consistency').textContent = data.consistency.driver;
+                document.getElementById('stat-weather').textContent = `${data.weather.avg_temp} °C`;
 
                 container.classList.remove('hidden');
-            } catch (e) {
-                errorDiv.textContent = e.message;
-                errorDiv.classList.remove('hidden');
-            }
+            } catch (e) { console.error(e); }
         });
+
+        function showModal(type) {
+            if(!currentInsights) return;
+            const modal = document.getElementById('info-modal');
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+
+            title.innerText = type.replace('_', ' ');
+            body.innerText = currentInsights[type].detail || "Detailed statistics are being calculated for this metric.";
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('info-modal').classList.add('hidden');
+        }
     </script>
 </body>
 </html>

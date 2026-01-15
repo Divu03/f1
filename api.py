@@ -6,6 +6,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
+from typing import Optional
 
 print("Starting Prediction & Insights API...")
 
@@ -43,35 +44,70 @@ CACHE_DIR = 'cache'
 if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
 fastf1.Cache.enable_cache(CACHE_DIR)
 
-@app.get("/predict/last_race")
-async def predict_last_race():
+@app.get("/schedule/{year}")
+async def get_schedule(year: int):
+    try:
+        schedule = fastf1.get_event_schedule(year, include_testing=False)
+        # Only return races that have an event date
+        races = schedule[schedule['EventFormat'] != 'testing']
+        result = []
+        for _, row in races.iterrows():
+            result.append({
+                "round": int(row['RoundNumber']),
+                "name": row['EventName'],
+                "date": str(row['EventDate'])
+            })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/predict")
+async def predict_race(year: Optional[int] = None, round_num: Optional[int] = None):
     try:
         current_year = pd.Timestamp.now().year
-        year_to_load = current_year
-        schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
-        races_completed = schedule[schedule['EventDate'] < pd.to_datetime('now')]
         
-        if races_completed.empty:
-            year_to_load = current_year - 1
+        # Determine which race to load
+        if year is None or round_num is None:
+            # Default to last completed race logic
+            year_to_load = current_year
             schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
-            last_race = schedule.iloc[-1]
-            all_season_results = pd.DataFrame()
+            races_completed = schedule[schedule['EventDate'] < pd.to_datetime('now')]
+            
+            if races_completed.empty:
+                year_to_load = current_year - 1
+                schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
+                last_race = schedule.iloc[-1]
+            else:
+                last_race = races_completed.iloc[-1]
+            
+            round_to_load = int(last_race['RoundNumber'])
         else:
-            last_race = races_completed.iloc[-1]
-            rounds_to_load = races_completed[races_completed['RoundNumber'] < last_race['RoundNumber']]['RoundNumber']
-            season_results_list = []
-            for round_num in rounds_to_load:
-                try:
-                    s = fastf1.get_session(year_to_load, round_num, 'R')
-                    s.load(weather=False, telemetry=False, messages=False)
-                    if s.results is not None:
-                        res = s.results
-                        res['RoundNumber'] = round_num
-                        season_results_list.append(res)
-                except: pass
-            all_season_results = pd.concat(season_results_list) if season_results_list else pd.DataFrame()
+            year_to_load = year
+            round_to_load = round_num
+            schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
+            selected_event = schedule[schedule['RoundNumber'] == round_to_load].iloc[0]
+            last_race = selected_event
 
-        session = fastf1.get_session(year_to_load, last_race['RoundNumber'], 'R')
+        # Load season context for Form calculation
+        # We load all races in THAT specific year prior to the target round
+        full_schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
+        prior_rounds = full_schedule[full_schedule['RoundNumber'] < round_to_load]['RoundNumber']
+        
+        season_results_list = []
+        for r in prior_rounds:
+            try:
+                s = fastf1.get_session(year_to_load, r, 'R')
+                s.load(weather=False, telemetry=False, messages=False)
+                if s.results is not None:
+                    res = s.results.copy()
+                    res['RoundNumber'] = r
+                    season_results_list.append(res)
+            except: pass
+        
+        all_season_results = pd.concat(season_results_list) if season_results_list else pd.DataFrame()
+
+        # Load Target Session
+        session = fastf1.get_session(year_to_load, round_to_load, 'R')
         session.load(weather=True, telemetry=False, messages=False)
         
         race_data = session.results
@@ -103,6 +139,8 @@ async def predict_last_race():
         output = output.where(pd.notnull(output), None)
         return {"race_name": f"{year_to_load} {last_race['EventName']}", "predictions": output.to_dict(orient='records')}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 @app.get("/insights/{year}")
@@ -111,41 +149,27 @@ async def get_year_insights(year: int):
     df_year = historical_df[historical_df['Year'] == year].copy()
     if df_year.empty: raise HTTPException(status_code=404, detail="No data for year")
 
-    # 1. Champion
     pts = df_year.groupby(['Abbreviation', 'TeamName'])['Points'].sum().sort_values(ascending=False)
     champ, champ_team = pts.index[0]
-    
-    # 2. Constructor
     c_pts = df_year.groupby('TeamName')['Points'].sum().sort_values(ascending=False)
-    
-    # 3. Pole Win Rate
     winners = df_year[df_year['Position'] == 1]
     pole_win_pct = round((len(winners[winners['GridPosition'] == 1]) / len(winners)) * 100, 1) if len(winners) > 0 else 0
-
-    # 4. Reliability (DNF Rate)
     total_entries = len(df_year)
     dnfs = df_year['Position'].isna().sum()
     dnf_rate = round((dnfs / total_entries) * 100, 1)
-
-    # 5. Overtake King (Most positions gained in races)
-    # Filter for finishers only to avoid DNF skews
     finishers = df_year.dropna(subset=['Position'])
     finishers['gained'] = finishers['GridPosition'] - finishers['Position']
     overtake_pts = finishers.groupby('Abbreviation')['gained'].sum().sort_values(ascending=False)
     overtake_king = overtake_pts.index[0]
     total_gained = int(overtake_pts.iloc[0])
-
-    # 6. Consistency (Most Top 10 finishes)
     top_10s = df_year[df_year['Position'] <= 10].groupby('Abbreviation').size().sort_values(ascending=False)
     consistent_driver = top_10s.index[0]
     consistent_count = int(top_10s.iloc[0])
-
-    # 7. Average Track Temperature
     avg_temp = round(df_year['TrackTemp'].mean(), 1)
 
     return {
         "year": year,
-        "champion": {"name": champ, "team": champ_team, "points": int(pts.iloc[0]), "detail": f"{champ} dominated with {len(df_year[df_year['Abbreviation']==champ][df_year['Position']==1])} wins."},
+        "champion": {"name": champ, "team": champ_team, "points": int(pts.iloc[0]), "detail": f"{champ} dominated with {len(df_year[(df_year['Abbreviation']==champ) & (df_year['Position']==1)])} wins."},
         "constructor": {"name": c_pts.index[0], "points": int(c_pts.iloc[0]), "detail": f"{c_pts.index[0]} outperformed {c_pts.index[1]} by {int(c_pts.iloc[0] - c_pts.iloc[1])} points."},
         "pole_rate": {"value": pole_win_pct, "detail": f"In {year}, starting on Pole was {'crucial' if pole_win_pct > 50 else 'less vital'} as {pole_win_pct}% of poles converted to wins."},
         "reliability": {"value": dnf_rate, "detail": f"The field saw {dnfs} total retirements. Reliability was a major factor in the championship battle."},

@@ -48,7 +48,6 @@ fastf1.Cache.enable_cache(CACHE_DIR)
 async def get_schedule(year: int):
     try:
         schedule = fastf1.get_event_schedule(year, include_testing=False)
-        # Only return races that have an event date
         races = schedule[schedule['EventFormat'] != 'testing']
         result = []
         for _, row in races.iterrows():
@@ -65,21 +64,16 @@ async def get_schedule(year: int):
 async def predict_race(year: Optional[int] = None, round_num: Optional[int] = None):
     try:
         current_year = pd.Timestamp.now().year
-        
-        # Determine which race to load
         if year is None or round_num is None:
-            # Default to last completed race logic
             year_to_load = current_year
             schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
             races_completed = schedule[schedule['EventDate'] < pd.to_datetime('now')]
-            
             if races_completed.empty:
                 year_to_load = current_year - 1
                 schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
                 last_race = schedule.iloc[-1]
             else:
                 last_race = races_completed.iloc[-1]
-            
             round_to_load = int(last_race['RoundNumber'])
         else:
             year_to_load = year
@@ -88,11 +82,8 @@ async def predict_race(year: Optional[int] = None, round_num: Optional[int] = No
             selected_event = schedule[schedule['RoundNumber'] == round_to_load].iloc[0]
             last_race = selected_event
 
-        # Load season context for Form calculation
-        # We load all races in THAT specific year prior to the target round
         full_schedule = fastf1.get_event_schedule(year_to_load, include_testing=False)
         prior_rounds = full_schedule[full_schedule['RoundNumber'] < round_to_load]['RoundNumber']
-        
         season_results_list = []
         for r in prior_rounds:
             try:
@@ -103,13 +94,10 @@ async def predict_race(year: Optional[int] = None, round_num: Optional[int] = No
                     res['RoundNumber'] = r
                     season_results_list.append(res)
             except: pass
-        
         all_season_results = pd.concat(season_results_list) if season_results_list else pd.DataFrame()
 
-        # Load Target Session
         session = fastf1.get_session(year_to_load, round_to_load, 'R')
         session.load(weather=True, telemetry=False, messages=False)
-        
         race_data = session.results
         weather = session.weather_data.iloc[0]
         
@@ -155,8 +143,11 @@ async def get_year_insights(year: int):
     winners = df_year[df_year['Position'] == 1]
     pole_win_pct = round((len(winners[winners['GridPosition'] == 1]) / len(winners)) * 100, 1) if len(winners) > 0 else 0
     total_entries = len(df_year)
+    
+    # Logic Update: Define DNF based on Position being NaN or specific non-classified status
     dnfs = df_year['Position'].isna().sum()
     dnf_rate = round((dnfs / total_entries) * 100, 1)
+    
     finishers = df_year.dropna(subset=['Position'])
     finishers['gained'] = finishers['GridPosition'] - finishers['Position']
     overtake_pts = finishers.groupby('Abbreviation')['gained'].sum().sort_values(ascending=False)
@@ -169,13 +160,13 @@ async def get_year_insights(year: int):
 
     return {
         "year": year,
-        "champion": {"name": champ, "team": champ_team, "points": int(pts.iloc[0]), "detail": f"{champ} dominated with {len(df_year[(df_year['Abbreviation']==champ) & (df_year['Position']==1)])} wins."},
-        "constructor": {"name": c_pts.index[0], "points": int(c_pts.iloc[0]), "detail": f"{c_pts.index[0]} outperformed {c_pts.index[1]} by {int(c_pts.iloc[0] - c_pts.iloc[1])} points."},
-        "pole_rate": {"value": pole_win_pct, "detail": f"In {year}, starting on Pole was {'crucial' if pole_win_pct > 50 else 'less vital'} as {pole_win_pct}% of poles converted to wins."},
-        "reliability": {"value": dnf_rate, "detail": f"The field saw {dnfs} total retirements. Reliability was a major factor in the championship battle."},
-        "overtake": {"driver": overtake_king, "value": total_gained, "detail": f"{overtake_king} gained a total of {total_gained} positions from their starting slots across the season."},
-        "consistency": {"driver": consistent_driver, "value": consistent_count, "detail": f"{consistent_driver} finished in the points {consistent_count} times, showing incredible season-long stability."},
-        "weather": {"avg_temp": avg_temp, "rainy": int(df_year[df_year['Rainfall'] > 0]['RaceName'].nunique()), "detail": f"Average track temperature was {avg_temp}°C. There were {int(df_year[df_year['Rainfall'] > 0]['RaceName'].nunique())} sessions with recorded rainfall."},
+        "champion": {"name": champ, "team": champ_team, "points": int(pts.iloc[0]), "detail": f"{champ} secured the title with {len(df_year[(df_year['Abbreviation']==champ) & (df_year['Position']==1)])} victories. Logic: Calculation is based on total points accumulated across all sessions in {year}."},
+        "constructor": {"name": c_pts.index[0], "points": int(c_pts.iloc[0]), "detail": f"{c_pts.index[0]} demonstrated engineering superiority, outperforming the closest rival by {int(c_pts.iloc[0] - c_pts.iloc[1])} points."},
+        "pole_rate": {"value": pole_win_pct, "detail": f"Pole conversion reflects the percentage of race winners who also secured P1 in Qualifying. In {year}, starting on Pole was {'a critical advantage' if pole_win_pct > 50 else 'less predictive of success'} at {pole_win_pct}%."},
+        "reliability": {"value": dnf_rate, "detail": f"We define Reliability based on Race Classification. Note: Under FIA rules, a driver can be classified (completed 90% distance) even if they retired from the race. Our model tracks unclassified DNFs (NaN positions), which may result in a lower statistical rate than total retirements observed on track."},
+        "overtake": {"driver": overtake_king, "value": total_gained, "detail": f"Overtake King is calculated by subtracting finishing position from grid position for all classified finishes. {overtake_king} gained a net total of {total_gained} positions across the season."},
+        "consistency": {"driver": consistent_driver, "value": consistent_count, "detail": f"Consistency reflects the reliability of performance. {consistent_driver} finished inside the points-paying positions (Top 10) in {consistent_count} separate race sessions."},
+        "weather": {"avg_temp": avg_temp, "rainy": int(df_year[df_year['Rainfall'] > 0]['RaceName'].nunique()), "detail": f"Environmental data is averaged across all sessions. In {year}, {int(df_year[df_year['Rainfall'] > 0]['RaceName'].nunique())} events featured recorded rainfall at the start of the race session."},
     }
 
 if __name__ == "__main__":

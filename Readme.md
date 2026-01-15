@@ -1,145 +1,138 @@
-🏎️ F1 Prediction Engine & Performance Analysis
+<h1 align="center">🏎️ F1 Analytics Hub</h1>
+<p align="center">
+<strong>An AI-Driven Prediction Engine & Performance Insights Dashboard</strong>
+</p>
 
-This project combines a Machine Learning model to predict Formula 1 race results with an interactive Data Analysis Dashboard to explore historical performance trends.
+<p align="center">
+<img src="https://www.google.com/search?q=https://img.shields.io/badge/Data_Science-F1_Analytics-red%3Fstyle%3Dfor-the-badge%26logo%3Dformula1" alt="F1 Analytics">
+<img src="https://www.google.com/search?q=https://img.shields.io/badge/Frontend-React_|_Vite-blue?style=for-the-badge&logo=react" alt="React">
+<img src="https://www.google.com/search?q=https://img.shields.io/badge/Backend-FastAPI-009688%3Fstyle%3Dfor-the-badge%26logo%3Dfastapi%26logoColor%3Dwhite" alt="FastAPI">
+<img src="https://www.google.com/search?q=https://img.shields.io/badge/ML-Random_Forest-F7931E%3Fstyle%3Dfor-the-badge%26logo%3Dscikitlearn%26logoColor%3Dwhite" alt="ML">
+</p>
 
-It leverages FastF1 for deep telemetry and race data, Scikit-learn for predictive modeling, and Streamlit for visual analysis.
+<br />
 
-🛠️ Tech Stack & Tools
+📖 Project Overview
 
-Language: Python 3.9+
+This platform bridges the gap between raw F1 telemetry and actionable insights. It provides a Machine Learning Prediction Engine and a Data Analysis Dashboard in a unified interface, analyzing historical performance data from 2018 to 2024.
 
-Data Source: FastF1 (Open-source bridge to F1 data)
+💡 The Technical Evolution
 
-Data Processing: Pandas, NumPy
+Originally a static HTML/JS project, this was migrated to React (Vite) to solve specific engineering challenges:
 
-Machine Learning: Scikit-learn (Random Forest Regressor)
+Declarative State: To sync the Race Calendar dynamically based on the selected Season.
 
-Backend API: FastAPI, Uvicorn
+Unified UX: To embed the Streamlit Analytics dashboard via an iframe, allowing users to stay within a single-page application.
 
-Visualization: Streamlit, Plotly, Seaborn
+Stability: To handle long-running data fetches (FastF1 API) without UI flickering or state resets.
 
-Frontend (Prediction): HTML5, TailwindCSS
+🛠️ Technical Stack & Engineering Purpose
 
-🚀 Installation
+<table align="center">
+<tr>
+<th>Category</th>
+<th>Tools</th>
+<th>Implementation Detail</th>
+</tr>
+<tr>
+<td><b>Data Engine</b></td>
+<td><code>FastF1</code>, <code>Pandas</code>, <code>NumPy</code></td>
+<td>Specialized telemetry extraction and rolling-window feature engineering.</td>
+</tr>
+<tr>
+<td><b>Machine Learning</b></td>
+<td><code>Scikit-learn</code></td>
+<td><b>Random Forest Regressor</b> for non-linear grid-to-finish modeling.</td>
+</tr>
+<tr>
+<td><b>Backend API</b></td>
+<td><code>FastAPI</code>, <code>Uvicorn</code></td>
+<td>Asynchronous service serving ML inference and historical segments.</td>
+</tr>
+<tr>
+<td><b>Frontend UI</b></td>
+<td><b>React (Vite)</b></td>
+<td>SPA architecture with interactive tabbed navigation and TailwindCSS styling.</td>
+</tr>
+<tr>
+<td><b>Analytics</b></td>
+<td><code>Streamlit</code>, <code>Plotly</code></td>
+<td>Embedded dashboard for deep-dive EDA and feature importance validation.</td>
+</tr>
+</table>
 
-Clone the repository:
+📈 Data Science Deep Dive
 
-git clone [https://github.com/your-username/f1-prediction-project.git](https://github.com/your-username/f1-prediction-project.git)
-cd f1-prediction-project
+📊 Feature Weighting
+
+Our model ranks inputs based on their predictive weight for the final finishing position:
+
+Grid Position ($\approx 55\%$--$60\%$): The single most significant predictor of race success.
+
+Constructor Form ($\approx 15\%$--$20\%$): Rolling 5-race performance of the car engineering.
+
+Driver Form ($\approx 10\%$--$15\%$): Captures individual momentum and psychological consistency.
+
+Weather Conditions ($< 5\%$): While high-impact, its rarity gives it a lower global statistical weight.
+
+🏁 The "Perfect Model" Challenge
+
+Mechanical Reliability: Defined based on Official Race Classification (completing $90\%$ of distance). This ensures a stable training target despite mechanical retirements.
+
+Recent Form Logic: Instead of static IDs, we use rolling-average point metrics to adapt to mid-season car upgrades and slumps.
+
+🚦 Installation & Execution
+
+🐳 The Docker Way (Full Stack)
+
+Launch the Frontend, Backend API, and Analytics Dashboard with a single command:
+
+docker-compose up --build
 
 
+Main App (React): http://localhost:5173
 
-Install dependencies:
+Prediction API: http://localhost:8000
+
+Analytics Dashboard: http://localhost:8501
+
+🔧 Manual Setup
+
+<details>
+<summary><b>Python Services</b></summary>
 
 pip install -r requirements.txt
+python build_dataset.py       # Scrape Data
+python train_model.py         # Train AI
+uvicorn api:app --reload      # Start API
+streamlit run analysis_app.py  # Start Analytics
 
 
+</details>
 
-🚦 Usage Guide
+<details>
+<summary><b>React Frontend</b></summary>
 
-This project consists of two main parts: the Prediction Engine and the Analysis Dashboard.
-
-Step 1: Data Collection (The Foundation)
-
-Before running anything, you need to build the historical dataset. This script downloads race results and weather data from 2018 to present.
-
-python build_dataset.py
+cd frontend
+npm install
+npm run dev
 
 
+</details>
 
-Note: This process takes time as it caches data locally to avoid repeated downloads.
+☁️ Cloud Roadmap
 
-Output: f1_race_data_2018_2024.csv
+I am currently deploying this to a cloud-native architecture:
 
-Step 2: Analysis Dashboard (The Pivot)
+Frontend: Vercel (Global Edge).
 
-Launch the interactive dashboard to explore factors like Grid Position, Team Dominance, and Weather Impact.
+Backend: AWS EC2 (t3.micro) + Docker Compose.
 
-streamlit run analysis_app.py
+Networking: Static Elastic IP with CORS-secured communication.
 
+[Live Demo Link Coming Soon!]
 
-
-Opens automatically in your browser (usually http://localhost:8501).
-
-Step 3: Machine Learning Prediction (Optional)
-
-If you want to run the predictive model:
-
-Train the Model:
-Calculates "Recent Form" features and trains a Random Forest model.
-
-python train_model.py
-
-
-
-Output: f1_prediction_model.joblib
-
-Start the API Server:
-Hosted using FastAPI to serve real-time predictions.
-
-uvicorn api:app --reload
-
-
-
-Use the Frontend:
-Open the index.html file in your browser to interact with the API.
-
-📂 Project Structure
-
-build_dataset.py: Scrapes and compiles the master CSV dataset.
-
-analysis_app.py: Streamlit Dashboard source code.
-
-train_model.py: Feature engineering (calculating form) and Model Training.
-
-api.py: FastAPI server that loads the model and predicts the latest race.
-
-index.html: User interface for the prediction engine.
-
-cache/: Stores raw FastF1 data (Git-ignored).
-
-📊 Model Insights: Feature Importance
-
-The Machine Learning model (Random Forest Regressor) ranks the "features" (inputs) based on how much they contribute to predicting the final finishing position. Based on training data from 2018-2024, here is the approximate breakdown of importance:
-
-Grid Position (~55-60%): By far the most critical factor. Where a driver qualifies is the single best predictor of where they finish.
-
-Constructor Form (~15-20%): The performance of the car team in the last 5 races. This captures the mechanical advantage (e.g., Red Bull vs. Haas).
-
-Driver Form (~10-15%): The driver's personal average points in the last 5 races. This helps distinguish teammates (e.g., Verstappen vs. Perez).
-
-Weather (Temp/Rain) (<5%): While rain causes chaos, it is statistically rare. In the global model, weather has a lower overall weight, though it causes high variance when it does happen.
-
-Why this matters: The model confirms that F1 is largely an engineering championship (Car + Grid Position), but "Form" features allow it to adapt to mid-season upgrades or driver slumps.
-
-💡 Code Highlights
-
-Feature Engineering: "Recent Form"
-
-Instead of relying on static driver IDs, the model calculates dynamic "form" based on the rolling average of points scored in the last 5 races. This allows the model to handle rookies and mid-season team changes effectively.
-
-# Calculating rolling average points for drivers
-df['driver_form'] = df.groupby('Abbreviation')['Points'].transform(
-    lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
-).fillna(0)
-
-# Calculating rolling average points for constructors
-df['constructor_form'] = df.groupby('TeamName')['Points'].transform(
-    lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
-).fillna(0)
-
-
-
-Prediction Logic
-
-The API calculates the current form for the active season on-the-fly before asking the model for a prediction.
-
-# From api.py
-features = [
-    'GridPosition',      # Where they start
-    'driver_form',       # How they've been driving lately
-    'constructor_form',  # How good the car is lately
-    'AirTemp',           # Weather conditions
-    'Rainfall'           # Wet or Dry
-]
-
+<p align="center">
+<b>Developed by 👨‍💻 Divyesh Kuchhadia</b><br />
+<a href="https://www.linkedin.com/in/divyeshkuchhadia11/">LinkedIn</a> • <a href="https://github.com/Divu03">GitHub</a> • <a href="https://divyesh-k.web.app">Portfolio</a>
+</p>

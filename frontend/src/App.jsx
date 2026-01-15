@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 
-// --- Icons (Inline SVGs for reliability) ---
+// --- Icons ---
 const ZapIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
   </svg>
 );
 
-const InfoIcon = () => (
-  <svg className="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+const ChartIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
   </svg>
 );
 
 const App = () => {
-  const API_BASE = 'http://127.0.0.1:8000';
+  const [activeTab, setActiveTab] = useState('predictions'); // 'predictions' or 'analytics'
+  const API_BASE = 'http://localhost:8000';
   
   // --- Prediction State ---
   const [predYear, setPredYear] = useState('default');
@@ -31,7 +32,7 @@ const App = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [modalType, setModalType] = useState(null);
 
-  // --- Effect: Sync Calendar when Year changes ---
+  // Sync Calendar
   useEffect(() => {
     const fetchCalendar = async () => {
       if (predYear === 'default') {
@@ -39,36 +40,28 @@ const App = () => {
         setPredRound('default');
         return;
       }
-
       setIsSyncingCalendar(true);
       try {
         const res = await fetch(`${API_BASE}/schedule/${predYear}`);
-        if (!res.ok) throw new Error("Sync Failed");
         const races = await res.json();
         setRaceOptions(races);
-        // Default to the first race if none selected
         if (races.length > 0) setPredRound(races[0].round.toString());
       } catch (err) {
-        setPredictionError("Failed to load race calendar.");
+        setPredictionError("Failed to sync with F1 Calendar.");
       } finally {
         setIsSyncingCalendar(false);
       }
     };
-
     fetchCalendar();
   }, [predYear]);
 
-  // --- Handlers ---
   const handleRunInference = async () => {
     setIsPredicting(true);
     setPredictionError(null);
-    setPredictionData(null);
-
     let url = `${API_BASE}/predict`;
     if (predYear !== 'default' && predRound !== 'default') {
       url += `?year=${predYear}&round_num=${predRound}`;
     }
-
     try {
       const res = await fetch(url);
       const data = await res.json();
@@ -83,283 +76,232 @@ const App = () => {
 
   const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
-    setInsightData(null);
     try {
       const res = await fetch(`${API_BASE}/insights/${insightYear}`);
-      if (!res.ok) throw new Error("Analysis failed");
       const data = await res.json();
       setInsightData(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAnalyzing(false);
-    }
+    } catch (err) { console.error(err); } finally { setIsAnalyzing(false); }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-4 md:p-8 font-sans selection:bg-red-500/30">
-      <div className="max-w-6xl mx-auto space-y-12">
-        
-        {/* HEADER */}
-        <header className="text-center border-b border-gray-800 pb-8">
-          <h1 className="text-5xl font-extrabold text-red-600 tracking-tighter mb-2">
-            F1 <span className="text-white underline decoration-red-600/30">Analytics Hub</span>
-          </h1>
-          <p className="text-gray-400 text-lg font-light">Predictive Modeling & Statistical Analysis for Professional Motorsports</p>
-          <div className="flex justify-center gap-3 mt-6">
-            {['Random Forest', 'FastAPI', 'Telemetry'].map(tag => (
-              <span key={tag} className="bg-gray-800 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-md border border-gray-700 text-gray-400">
-                {tag}
-              </span>
-            ))}
+    <div className="min-h-screen bg-gray-950 text-gray-100 font-sans">
+      {/* NAVBAR */}
+      <nav className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-red-600 p-2 rounded-lg">
+              <ZapIcon />
+            </div>
+            <h1 className="text-2xl font-black tracking-tighter uppercase">F1 <span className="text-red-600">Hub</span></h1>
           </div>
-        </header>
+          <div className="flex bg-gray-800 rounded-xl p-1">
+            <button 
+              onClick={() => setActiveTab('predictions')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'predictions' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+            >
+              AI Predictions
+            </button>
+            <button 
+              onClick={() => setActiveTab('analytics')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+            >
+              Data Analytics
+            </button>
+          </div>
+        </div>
+      </nav>
 
-        {/* MAIN LAYOUT */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* LEFT: PREDICTION ENGINE */}
-          <div className="lg:col-span-2 space-y-8">
-            <section className="bg-gray-800 p-6 md:p-8 rounded-3xl shadow-2xl border border-gray-700 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-red-600 to-transparent"></div>
-              
-              <h2 className="text-2xl font-bold mb-8 flex items-center">
-                <span className="bg-red-600 w-1.5 h-6 mr-3 rounded-full"></span> 
-                Predictive Analysis
-              </h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-black text-gray-500 mb-1.5 uppercase tracking-wider ml-1">Season</label>
-                  <select 
-                    value={predYear}
-                    onChange={(e) => setPredYear(e.target.value)}
-                    disabled={isPredicting}
-                    className="bg-gray-900 text-white border border-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all disabled:opacity-50 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27white%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-position-[right_1rem_center] bg-size-[1em]"
-                  >
-                    <option value="default">Last Completed</option>
-                    {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => (
-                      <option key={y} value={y}>{y} Season</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-black text-gray-500 mb-1.5 uppercase tracking-wider ml-1">Event</label>
-                  <select 
-                    value={predRound}
-                    onChange={(e) => setPredRound(e.target.value)}
-                    disabled={isSyncingCalendar || isPredicting || predYear === 'default'}
-                    className="bg-gray-900 text-white border border-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all disabled:opacity-30 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27white%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-position-[right_1rem_center] bg-size-[1em]"
-                  >
-                    {isSyncingCalendar ? (
-                      <option>Syncing Calendar...</option>
-                    ) : predYear === 'default' ? (
-                      <option value="default">Auto-Detect</option>
-                    ) : (
-                      raceOptions.map(r => (
-                        <option key={r.round} value={r.round}>{r.name}</option>
-                      ))
-                    )}
-                  </select>
-                </div>
-
-                <div className="flex flex-col justify-end">
-                  <button 
-                    onClick={handleRunInference}
-                    disabled={isPredicting || (predYear !== 'default' && raceOptions.length === 0)}
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300 transform active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <span>{isPredicting ? 'Inference Active...' : 'Run Inference'}</span>
-                    {!isPredicting && <ZapIcon />}
-                  </button>
-                </div>
-              </div>
-
-              {predictionError && (
-                <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm flex items-start gap-3 animate-pulse">
-                  <InfoIcon />
-                  <span>{predictionError}</span>
-                </div>
-              )}
-
-              {isPredicting && (
-                <div className="py-12 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto"></div>
-                  <p className="text-gray-500 text-[10px] font-bold uppercase mt-6 tracking-[0.3em]">Calculating Form & Telemetry</p>
-                </div>
-              )}
-
-              {predictionData && (
-                <div className="animate-in fade-in duration-500">
-                  <div className="flex justify-between items-end mb-4 px-1">
-                    <h3 className="text-xl font-bold text-white">{predictionData.race_name}</h3>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Model Prediction</span>
+      <main className="max-w-7xl mx-auto p-6 md:p-10">
+        {activeTab === 'predictions' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-700">
+            {/* LEFT: ENGINE */}
+            <div className="lg:col-span-2 space-y-8">
+              <section className="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-2xl relative">
+                <div className="absolute top-0 left-0 w-32 h-1 bg-red-600"></div>
+                <h2 className="text-3xl font-bold mb-8 tracking-tight">Race Inference Engine</h2>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Season</label>
+                    <select value={predYear} onChange={(e) => setPredYear(e.target.value)} className="w-full bg-gray-800 border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-red-600 outline-none">
+                      <option value="default">Last Completed</option>
+                      {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
                   </div>
-                  <div className="overflow-x-auto rounded-2xl border border-gray-700 bg-gray-900/50">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-gray-800/50 text-gray-400 text-[10px] uppercase font-black">
-                        <tr>
-                          <th className="px-6 py-4">Rank</th>
-                          <th class="px-6 py-4">Driver</th>
-                          <th className="px-6 py-4">Constructor</th>
-                          <th className="px-6 py-4">Grid</th>
-                          <th className="px-6 py-4">Actual</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-800">
-                        {predictionData.predictions.map((p) => (
-                          <tr key={p.Abbreviation} className="hover:bg-gray-800/50 transition duration-150">
-                            <td className="px-6 py-4 font-black text-gray-100">#{p.PredictedRank}</td>
-                            <td className="px-6 py-4 font-semibold text-white">{p.FullName}</td>
-                            <td className="px-6 py-4 text-gray-500 font-medium">{p.TeamName}</td>
-                            <td className="px-6 py-4 text-gray-400 font-mono">{p.GridPosition || 'Pit'}</td>
-                            <td className={`px-6 py-4 font-black ${p.ActualPosition === p.PredictedRank ? 'text-green-500' : 'text-gray-400'}`}>
-                              {p.ActualPosition || 'DNF'}
-                            </td>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Event</label>
+                    <select value={predRound} onChange={(e) => setPredRound(e.target.value)} disabled={isSyncingCalendar || predYear === 'default'} className="w-full bg-gray-800 border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-red-600 outline-none disabled:opacity-30">
+                      {isSyncingCalendar ? <option>Syncing...</option> : raceOptions.map(r => <option key={r.round} value={r.round}>{r.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button onClick={handleRunInference} disabled={isPredicting} className="w-full bg-red-600 hover:bg-red-700 h-13 rounded-xl font-bold text-lg shadow-xl shadow-red-900/20 active:scale-95 transition-all">
+                      {isPredicting ? 'Crunching...' : 'Predict Race'}
+                    </button>
+                  </div>
+                </div>
+
+                {predictionError && (
+                  <div className="mb-6 p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-400 text-sm">{predictionError}</div>
+                )}
+
+                {predictionData && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+                      <h3 className="text-xl font-bold text-white">{predictionData.race_name}</h3>
+                      <div className="flex gap-2">
+                        <span className="bg-gray-800 text-[9px] font-bold px-2 py-1 rounded">RANDOM_FOREST_V2</span>
+                      </div>
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-gray-800">
+                      <table className="w-full text-left">
+                        <thead className="bg-gray-800/50 text-gray-500 text-[10px] font-black uppercase">
+                          <tr>
+                            <th className="px-6 py-4">Pred</th>
+                            <th className="px-6 py-4">Driver</th>
+                            <th className="px-6 py-4">Grid</th>
+                            <th className="px-6 py-4">Actual</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-800">
+                          {predictionData.predictions.slice(0, 10).map((p) => (
+                            <tr key={p.Abbreviation} className="hover:bg-gray-800/30 transition">
+                              <td className="px-6 py-4 font-black text-red-500">P{p.PredictedRank}</td>
+                              <td className="px-6 py-4">
+                                <p className="font-bold text-white">{p.FullName}</p>
+                                <p className="text-[10px] text-gray-500">{p.TeamName}</p>
+                              </td>
+                              <td className="px-6 py-4 font-mono text-gray-400">{p.GridPosition || 'Pit'}</td>
+                              <td className={`px-6 py-4 font-black ${p.ActualPosition === p.PredictedRank ? 'text-green-500' : 'text-gray-600'}`}>
+                                {p.ActualPosition || 'DNF'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* SEASON INSIGHTS PANEL */}
+              <section className="bg-gray-900 p-8 rounded-3xl border border-gray-800">
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-2xl font-bold">Season Diagnostics</h2>
+                  <div className="flex gap-2">
+                    <select value={insightYear} onChange={(e) => setInsightYear(e.target.value)} className="bg-gray-800 border-none rounded-lg text-xs p-2 outline-none">
+                      {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <button onClick={handleRunAnalysis} className="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">Analyze</button>
                   </div>
                 </div>
-              )}
-            </section>
+                {insightData ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div onClick={() => setModalType('champion')} className="bg-gray-800 p-4 rounded-2xl cursor-pointer hover:border-red-600 border border-transparent transition">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Champ</p>
+                      <p className="text-lg font-bold truncate text-white">{insightData.champion.name}</p>
+                    </div>
+                    <div onClick={() => setModalType('pole_rate')} className="bg-gray-800 p-4 rounded-2xl cursor-pointer hover:border-red-600 border border-transparent transition">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Pole Conv.</p>
+                      <p className="text-lg font-bold text-green-400">{insightData.pole_rate.value}%</p>
+                    </div>
+                    <div onClick={() => setModalType('overtake')} className="bg-gray-800 p-4 rounded-2xl cursor-pointer hover:border-red-600 border border-transparent transition">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Overtake King</p>
+                      <p className="text-lg font-bold text-white">{insightData.overtake.driver}</p>
+                    </div>
+                    <div onClick={() => setModalType('reliability')} className="bg-gray-800 p-4 rounded-2xl cursor-pointer hover:border-red-600 border border-transparent transition">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">DNF Rate</p>
+                      <p className="text-lg font-bold text-orange-400">{insightData.reliability.value}%</p>
+                    </div>
+                    <div onClick={() => setModalType('consistency')} className="bg-gray-800 p-4 rounded-2xl cursor-pointer hover:border-red-600 border border-transparent transition">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Consistency</p>
+                      <p className="text-lg font-bold text-white">{insightData.consistency.driver}</p>
+                    </div>
+                    <div onClick={() => setModalType('weather')} className="bg-gray-800 p-4 rounded-2xl cursor-pointer hover:border-red-600 border border-transparent transition">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg Temp</p>
+                      <p className="text-lg font-bold text-blue-300">{insightData.weather.avg_temp}°C</p>
+                    </div>
+                  </div>
+                ) : <p className="text-gray-600 text-sm italic">Select a season to load performance analytics...</p>}
+              </section>
+            </div>
 
-            {/* SEASON INSIGHTS */}
-            <section className="bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl border border-gray-700">
-              <h2 className="text-2xl font-bold mb-8 flex items-center">
-                <span className="bg-blue-600 w-1.5 h-6 mr-3 rounded-full"></span> Season Diagnostics
-              </h2>
-
-              <div className="flex flex-wrap gap-4 mb-8">
-                <select 
-                  value={insightYear}
-                  onChange={(e) => setInsightYear(e.target.value)}
-                  className="bg-gray-900 text-white border border-gray-700 rounded-xl px-6 py-3 focus:ring-2 focus:ring-blue-600 outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27white%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-position-[right_1rem_center] bg-size-[1em] pr-12"
-                >
-                  {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => (
-                    <option key={y} value={y}>{y} Season</option>
-                  ))}
-                </select>
-                <button 
-                  onClick={handleRunAnalysis}
-                  disabled={isAnalyzing}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition duration-300 disabled:opacity-50"
-                >
-                  {isAnalyzing ? 'Analyzing Data...' : 'Analyze Year'}
-                </button>
-              </div>
-
-              {insightData && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in slide-in-from-bottom-4 duration-500">
+            {/* RIGHT: DATA SCIENCE SPECS */}
+            <aside className="space-y-6">
+              <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800">
+                <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6">Model Intelligence</h3>
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="bg-black/30 p-4 rounded-2xl border border-gray-800">
+                    <p className="text-[9px] font-black text-gray-500 uppercase">R² Accuracy</p>
+                    <p className="text-2xl font-bold text-green-500">0.44</p>
+                  </div>
+                  <div className="bg-black/30 p-4 rounded-2xl border border-gray-800">
+                    <p className="text-[9px] font-black text-gray-500 uppercase">MAE Error</p>
+                    <p className="text-2xl font-bold text-blue-500">3.37</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Feature Weighting</p>
                   {[
-                    { id: 'champion', label: 'Champion', value: insightData.champion.name, color: 'text-white' },
-                    { id: 'pole_rate', label: 'Pole Conv.', value: `${insightData.pole_rate.value}%`, color: 'text-green-400' },
-                    { id: 'overtake', label: 'Overtake King', value: insightData.overtake.driver, color: 'text-white' },
-                    { id: 'reliability', label: 'Reliability', value: `${insightData.reliability.value}%`, color: 'text-orange-400' },
-                    { id: 'consistency', label: 'Consistency', value: insightData.consistency.driver, color: 'text-white' },
-                    { id: 'weather', label: 'Avg Climate', value: `${insightData.weather.avg_temp} °C`, color: 'text-blue-300' }
-                  ].map(stat => (
-                    <div 
-                      key={stat.id}
-                      onClick={() => setModalType(stat.id)}
-                      className="bg-gray-900/40 p-5 rounded-2xl border border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:cursor-pointer hover:border-red-600 group"
-                    >
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1 group-hover:text-red-400">{stat.label}</p>
-                      <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                    { l: 'Grid Position', w: 55.7, c: 'bg-red-600' },
+                    { l: 'Constructor Form', w: 10.4, c: 'bg-blue-600' },
+                    { l: 'Track Temp', w: 9.0, c: 'bg-orange-600' },
+                    { l: 'Driver Form', w: 7.5, c: 'bg-purple-600' }
+                  ].map(f => (
+                    <div key={f.l}>
+                      <div className="flex justify-between text-[10px] mb-1 font-bold">
+                        <span className="text-gray-500">{f.l}</span>
+                        <span>{f.w}%</span>
+                      </div>
+                      <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                        <div className={`${f.c} h-full`} style={{ width: `${f.w}%` }} />
+                      </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </section>
-          </div>
-
-          {/* RIGHT: MODEL INTELLIGENCE */}
-          <div className="space-y-8">
-            <section className="bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-700 h-full">
-              <h2 className="text-xl font-bold mb-6 flex items-center">
-                <span className="bg-green-600 w-1.5 h-6 mr-3 rounded-full"></span> Data Science Specs
-              </h2>
-              
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-900 p-4 rounded-2xl border border-gray-700 text-center">
-                    <p className="text-gray-500 text-[10px] uppercase font-black tracking-widest">R² Score</p>
-                    <p className="text-2xl font-bold text-green-500">0.44</p>
-                    <p className="text-[9px] text-gray-500 mt-1 italic">Validation Metric</p>
-                  </div>
-                  <div className="bg-gray-900 p-4 rounded-2xl border border-gray-700 text-center">
-                    <p className="text-gray-500 text-[10px] uppercase font-black tracking-widest">MAE</p>
-                    <p className="text-2xl font-bold text-blue-500">3.37</p>
-                    <p className="text-[9px] text-gray-500 mt-1 italic">Avg Pos Error</p>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <p className="text-xs font-black text-gray-400 mb-6 uppercase tracking-widest">Feature Weight Matrix</p>
-                  <div className="space-y-5">
-                    {[
-                      { label: 'Grid Position', weight: 55.7, color: 'bg-red-600' },
-                      { label: 'Constructor Form', weight: 10.4, color: 'bg-blue-600' },
-                      { label: 'Track Temp', weight: 9.0, color: 'bg-orange-600' },
-                      { label: 'Driver Form', weight: 7.5, color: 'bg-purple-600' }
-                    ].map(feat => (
-                      <div key={feat.label}>
-                        <div className="flex justify-between text-[10px] font-bold mb-1.5 uppercase tracking-tighter">
-                          <span className="text-gray-300">{feat.label}</span>
-                          <span className={feat.color.replace('bg-', 'text-')}>{feat.weight}%</span>
-                        </div>
-                        <div className="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`${feat.color} h-full transition-all duration-1000 ease-out`} 
-                            style={{ width: `${feat.weight}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-blue-900/10 p-4 rounded-2xl border border-blue-800/30">
-                  <p className="text-[10px] leading-relaxed text-blue-300">
-                    <strong>Architecture:</strong> Random Forest Regressor optimized via GridSearchCV. Model generalizes race outcomes by converting static IDs into dynamic rolling performance vectors.
-                  </p>
-                </div>
               </div>
-            </section>
+
+              <div className="bg-blue-900/10 p-6 rounded-3xl border border-blue-800/30">
+                <p className="text-[11px] leading-relaxed text-blue-300 italic">
+                  "This project utilizes a Random Forest Regressor trained on 3,000+ race entries. By transforming static driver IDs into dynamic 'Form' vectors, the model adapts to mid-season updates."
+                </p>
+              </div>
+            </aside>
           </div>
-        </div>
-      </div>
+        ) : (
+          /* ANALYTICS TAB: STREAMLIT IFRAME */
+          <div className="animate-in slide-in-from-bottom-8 duration-700">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight">Advanced Performance Dashboard</h2>
+                <p className="text-gray-500 mt-1">Deep-dive visual analysis powered by Streamlit & Plotly</p>
+              </div>
+              <div className="bg-green-600/10 text-green-500 text-[10px] font-black px-3 py-1 rounded-full border border-green-500/20">
+                LIVE TELEMETRY ANALYSIS
+              </div>
+            </div>
+            <div className="w-full h-[85vh] rounded-3xl overflow-hidden border border-gray-800 shadow-2xl bg-gray-900 relative">
+              <iframe 
+                src="http://localhost:8501" 
+                className="w-full h-full border-none"
+                title="F1 Analytics Dashboard"
+              />
+              {/* Overlay for unauthorized access or styling if needed */}
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* MODAL */}
       {modalType && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setModalType(null)}
-        >
-          <div 
-            className="bg-gray-800 border border-gray-700 max-w-md w-full rounded-3xl p-8 shadow-2xl relative animate-in zoom-in-95 duration-200"
-            onClick={e => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setModalType(null)}
-              className="absolute top-5 right-5 text-gray-500 hover:text-white transition text-2xl"
-            >
-              &times;
-            </button>
-            <h3 className="text-xl font-black text-red-600 mb-4 uppercase tracking-tighter">
-              {modalType.replace('_', ' ')} Insight
-            </h3>
-            <p className="text-gray-300 leading-relaxed text-base mb-8">
-              {insightData[modalType]?.detail || "Additional telemetry data is being cross-referenced for this specific metric."}
-            </p>
-            <button 
-              onClick={() => setModalType(null)}
-              className="w-full bg-gray-700 hover:bg-gray-600 py-3 rounded-xl font-bold transition text-sm"
-            >
-              Close Insight
-            </button>
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setModalType(null)}>
+          <div className="bg-gray-900 border border-gray-800 max-w-md w-full rounded-3xl p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-red-600 mb-4 uppercase italic tracking-tighter border-b border-gray-800 pb-2">{modalType.replace('_', ' ')} Insight</h3>
+            <div className="mt-4 mb-8">
+               <p className="text-gray-400 text-xs font-black uppercase tracking-widest mb-2">Analysis & Logic:</p>
+               <p className="text-gray-300 text-lg leading-relaxed">{insightData[modalType]?.detail}</p>
+            </div>
+            <button onClick={() => setModalType(null)} className="w-full bg-gray-800 hover:bg-gray-700 py-4 rounded-xl font-bold text-sm transition-colors">Dismiss</button>
           </div>
         </div>
       )}
